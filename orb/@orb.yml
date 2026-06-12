@@ -1,0 +1,13 @@
+version: 2.1
+
+description: >
+  ⚙️ Scan your
+  Java, Kotlin, PHP, Python, JavaScript, TypeScript
+  projects at CircleCI with Qodana
+# What will your orb allow users to accomplish?
+# Descriptions should be short, simple, and informative.
+
+# This information will be displayed in the orb registry and is not mandatory.
+display:
+  home_url: "https://www.jetbrains.com/help/qodana/circleci.html"
+  source_url: "https://github.com/JetBrains/qodana-action"
