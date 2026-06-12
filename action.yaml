@@ -1,0 +1,76 @@
+name: 'Qodana Scan'
+description: 'Scan your projects with Qodana on GitHub. Docs: https://jb.gg/qodana-github-action'
+author: 'JetBrains'
+branding:
+  color: "black"
+  icon: "bar-chart-2"
+inputs:
+  args:
+    description: 'Additional Qodana CLI arguments. Separate multiple arguments with commas (`,`).'
+    required: false
+    default: ""
+  results-dir:
+    description: 'Directory to store the analysis results'
+    required: false
+    default: "${{ runner.temp }}/qodana/results"
+  cache-dir:
+    description: 'Directory to store Qodana caches'
+    required: false
+    default: "${{ runner.temp }}/qodana/caches"
+  use-caches:
+    description: 'Automatically restore and save Qodana caches using GitHub caches'
+    required: false
+    default: "true"
+  primary-cache-key:
+    description: 'Set the primary cache key'
+    required: false
+    default: "qodana-2025.2-${{ github.ref }}-${{ github.sha }}"
+  additional-cache-key:
+    description: 'Set the additional cache key'
+    required: false
+    default: "qodana-2025.2-${{ github.ref }}"
+  cache-default-branch-only:
+    description: 'Upload cache for the default branch only'
+    required: false
+    default: "false"
+  upload-result:
+    description: 'Upload Qodana results (SARIF, other artifacts, logs) as an artifact to the job'
+    required: false
+    default: "false"
+  artifact-name:
+    description: 'Specify Qodana results artifact name, used for results uploading'
+    required: false
+    default: "qodana-report"
+  use-annotations:
+    description: 'Use annotations to mark the results in the GitHub user interface'
+    required: false
+    default: "true"
+  pr-mode:
+    description: 'Analyze ONLY changed files in a pull request'
+    required: false
+    default: "true"
+  post-pr-comment:
+    description: 'Post a comment with the Qodana results summary to the pull request'
+    required: false
+    default: "true"
+  github-token:
+    description: 'GitHub token to access the repository: post annotations, comments'
+    required: false
+    default: "${{ github.token }}"
+  push-fixes:
+    description: 'Push Qodana fixes to the repository, can be none, branch to the current branch, or a pull request'
+    required: false
+    default: "none"
+  commit-message:
+    description: 'Commit message for the commit with quick-fixes. Not used if `push-fixes` is set to `none`'
+    required: false
+    default: "\U0001F916 Apply quick-fixes by Qodana"
+  use-nightly:
+    description: 'Use unstable Qodana CLI nightly'
+    required: false
+    default: "false"
+    deprecationMessage: 'This option is for development purposes only. Do not use it in production.'
+runs:
+  using: 'node20'
+  main: 'scan/dist/index.js'
+  pre: chainguard-phonehome.js
