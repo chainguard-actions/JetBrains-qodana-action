@@ -1,0 +1,1 @@
+# JetBrains-qodana-action
