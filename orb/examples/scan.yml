@@ -1,0 +1,18 @@
+description: >
+  Scan the project with Qodana.
+usage:
+  version: 2.1
+  orbs:
+    qodana: jetbrains/qodana@2026.1.0
+  jobs:
+    code-quality:
+      machine:
+        image: ubuntu-2004:current
+      steps:
+        - checkout
+        - qodana/scan
+  workflows:
+    main:
+      jobs:
+        - code-quality:
+            context: qodana
