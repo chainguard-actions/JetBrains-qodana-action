@@ -1,0 +1,608 @@
+import {
+  BRANCH,
+  EXECUTABLE,
+  getProcessArchName,
+  getProcessPlatformName,
+  getQodanaScanArgs,
+  getQodanaSha256,
+  getQodanaSha256MismatchMessage,
+  getQodanaUrl,
+  getNightlyTag,
+  Inputs,
+  NONE,
+  PULL_REQUEST,
+  PushFixesType,
+  sha256sum,
+  validateBranchName
+} from '../../common/qodana'
+import {COMMIT_EMAIL, COMMIT_USER, getCommentTag} from '../../common/output'
+import {
+  parseRawArguments,
+  setDeprecationWarningCallback
+} from '../../common/utils'
+import {getGitlabApi} from './gitlabApiProvider'
+import {prFixesBody} from './output'
+import {DiscussionSchema} from '@gitbeaker/rest'
+import * as os from 'os'
+import * as fs from 'fs'
+import axios from 'axios'
+import * as stream from 'stream'
+import {Readable} from 'stream'
+import {promisify} from 'util'
+import AdmZip from 'adm-zip'
+import * as tar from 'tar'
+import path from 'path'
+import {exec, spawn} from 'child_process'
+import {debuglog, inspect} from 'node:util'
+
+// Set up platform-specific deprecation warning callback for GitLab CI
+setDeprecationWarningCallback((message: string) => {
+  console.warn(`WARNING: ${message}`)
+})
+
+let cachedInputs: Inputs | null = null
+
+// specify NODE_DEBUG=qodana:gitlab env variable to see debug messages
+const debug = debuglog('qodana:gitlab')
+
+export function getInputs(): Inputs {
+  if (cachedInputs !== null) {
+    return cachedInputs
+  }
+  const rawArgs = getQodanaStringArg('ARGS', '')
+  debug(`Raw args: ${rawArgs}`)
+  const argList = parseRawArguments(rawArgs)
+  const qodanaDockerEnv = process.env.QODANA_DOCKER ?? ''
+  if (qodanaDockerEnv === '' && !argList.includes('within-docker')) {
+    argList.push('--within-docker', 'false')
+  }
+  let pushFixes = getQodanaStringArg('PUSH_FIXES', 'none')
+  if (pushFixes === 'merge-request') {
+    pushFixes = 'pull-request'
+  }
+
+  cachedInputs = {
+    args: argList,
+    // user given results and cache dirs are used in uploadCache, prepareCaches and uploadArtifacts
+    resultsDir: `${baseDir()}/results`,
+    cacheDir: `${baseDir()}/cache`,
+    uploadResult: getQodanaBooleanArg('UPLOAD_RESULT', false),
+    prMode: getQodanaBooleanArg('MR_MODE', true),
+    pushFixes: pushFixes,
+    commitMessage: getQodanaStringArg(
+      'COMMIT_MESSAGE',
+      '🤖 Apply quick-fixes by Qodana'
+    ),
+    nightlyVersion: getQodanaStringArg('NIGHTLY_VERSION', ''),
+    postComment: getQodanaBooleanArg('POST_MR_COMMENT', true),
+    useCaches: getQodanaBooleanArg('USE_CACHES', true),
+    // not used by GitLab
+    uploadSarif: false,
+    useAnnotations: false,
+    additionalCacheKey: '',
+    primaryCacheKey: '',
+    cacheDefaultBranchOnly: false,
+    githubToken: '',
+    artifactName: '',
+    workingDirectory: ''
+  }
+  debug(`Got inputs: ${JSON.stringify(cachedInputs)}`)
+  return cachedInputs
+}
+
+function baseDir(): string {
+  const basePath = process.env.CI_BUILDS_DIR || os.tmpdir()
+  return `${basePath}/.qodana`
+}
+
+function getQodanaStringArg(name: string, def: string): string {
+  return process.env[`QODANA_${name}`] || def
+}
+
+function getQodanaBooleanArg(name: string, def: boolean): boolean {
+  const value = process.env[`QODANA_${name}`]?.toLowerCase()
+  return def ? value !== 'false' : value === 'true'
+}
+
+interface CommandOutput {
+  returnCode: number
+  stdout: string
+  stderr: string
+}
+
+export async function execAsync(
+  executable: string,
+  args: string[],
+  ignoreReturnCode: boolean
+): Promise<CommandOutput> {
+  return new Promise((resolve, reject) => {
+    let stdout = ''
+    let stderr = ''
+    const proc = spawn(executable, args)
+    proc.stdout.on('data', (data: Buffer) => {
+      stdout += data.toString()
+    })
+    proc.stderr.on('data', (data: Buffer) => {
+      stderr += data.toString()
+    })
+    proc.on('close', code => {
+      if (code !== 0) {
+        const token = process.env.QODANA_GITLAB_TOKEN || ''
+        let commandStr = `${executable} ${args.join(' ')}`
+        if (token !== '') {
+          commandStr = commandStr.replace(token, '***')
+        }
+        console.warn(`Failed to run command: ${commandStr}: exit code ${code}`)
+        if (ignoreReturnCode) {
+          return resolve({returnCode: code ?? -1, stdout, stderr})
+        }
+        return reject(
+          new Error(
+            `Failed to run command: ${commandStr}: exit code ${code}\nStdout: ${stdout}\nStderr: ${stderr}`
+          )
+        )
+      }
+      resolve({returnCode: 0, stdout, stderr})
+    })
+    proc.on('error', err => {
+      const token = process.env.QODANA_GITLAB_TOKEN || ''
+      let commandStr = `${executable} ${args.join(' ')}`
+      if (token !== '') {
+        commandStr = commandStr.replace(token, '***')
+      }
+      console.warn(`Failed to run command: ${commandStr}: ${err.message}`)
+      if (ignoreReturnCode) {
+        return resolve({returnCode: -1, stdout, stderr})
+      }
+      return reject(
+        new Error(
+          `Failed to run command: ${commandStr}: ${err.message}\nStdout: ${stdout}\nStderr: ${stderr}`
+        )
+      )
+    })
+  })
+}
+
+async function gitOutput(
+  args: string[],
+  ignoreReturnCode = false
+): Promise<CommandOutput> {
+  const result = await execAsync('git', args, true)
+  debug(`Git command with args ${args.join(' ')} output: ${inspect(result)})}`)
+  if (result.returnCode !== 0 && ignoreReturnCode) {
+    console.warn(
+      `Git command failed: git ${args.join(' ')}\nExit code: ${result.returnCode}\nStdout: ${result.stdout}\nStderr: ${result.stderr}`
+    )
+  } else if (result.returnCode !== 0) {
+    throw new Error(
+      `git command failed: git ${args.join(' ')} returned ${result.returnCode}\nStdout: ${result.stdout}\nStderr: ${result.stderr}`
+    )
+  }
+  return result
+}
+
+async function git(args: string[], ignoreReturnCode = false): Promise<number> {
+  return (await gitOutput(args, ignoreReturnCode)).returnCode
+}
+
+function isMergeRequest(): boolean {
+  return process.env.CI_PIPELINE_SOURCE === 'merge_request_event'
+}
+
+async function downloadTool(url: string): Promise<string> {
+  const tempPath = `${os.tmpdir()}/qodana-cli-${Date.now()}`
+  const writer = fs.createWriteStream(tempPath)
+  const response = await axios({
+    url,
+    method: 'GET',
+    responseType: 'stream'
+  })
+  const data = response.data as Readable
+  data.pipe(writer)
+  await promisify(stream.finished)(writer)
+  return tempPath
+}
+
+export async function isCliInstalled(): Promise<boolean> {
+  return new Promise(resolve => {
+    exec('qodana -v', error => {
+      if (error) {
+        resolve(false)
+      } else {
+        resolve(true)
+      }
+    })
+  })
+}
+
+export async function installCli(nightlyVersion: string): Promise<void> {
+  const arch = getProcessArchName()
+  const platform = getProcessPlatformName()
+  const nightlyTag = await getNightlyTag(nightlyVersion)
+  const temp = await downloadTool(getQodanaUrl(arch, platform, nightlyTag))
+  if (!nightlyVersion) {
+    const expectedChecksum = getQodanaSha256(arch, platform)
+    const actualChecksum = sha256sum(temp)
+    if (actualChecksum !== expectedChecksum) {
+      throw new Error(
+        getQodanaSha256MismatchMessage(expectedChecksum, actualChecksum)
+      )
+    }
+  }
+  const extractRoot = `${os.tmpdir()}/qodana-cli`
+  fs.mkdirSync(extractRoot, {recursive: true})
+  if (process.platform === 'win32') {
+    const zip = new AdmZip(temp)
+    zip.extractAllTo(extractRoot, true)
+  } else {
+    await tar.x({
+      C: extractRoot,
+      f: temp
+    })
+  }
+  fs.rmSync(temp, {force: true})
+  const separator = process.platform === 'win32' ? ';' : ':'
+  process.env.PATH = process.env.PATH + separator + extractRoot
+}
+
+export async function prepareAgent(nightlyVersion: string): Promise<void> {
+  if (!(await isCliInstalled())) {
+    debug('CLI is not installed, installing...')
+    await installCli(nightlyVersion)
+  } else {
+    debug('CLI is already installed, skipping installation')
+  }
+}
+
+export async function qodanaExec(args: string[]): Promise<number> {
+  debug(`Executing Qodana with arguments: ${inspect(args)}`)
+  process.env = {
+    ...process.env,
+    NONINTERACTIVE: '1'
+  }
+  return new Promise(resolve => {
+    const proc = spawn(EXECUTABLE, args, {stdio: 'inherit'})
+    proc.on('close', (code, signal) => {
+      if (code == null) {
+        console.error(`Qodana process terminated by signal: ${signal}`)
+        resolve(1)
+      } else {
+        resolve(code)
+      }
+    })
+
+    proc.on('error', err => {
+      console.error(err.message)
+      resolve(127)
+    })
+  })
+}
+
+export async function qodanaScan(): Promise<number> {
+  const inputs = getInputs()
+  const args = getQodanaScanArgs(
+    inputs.args,
+    inputs.resultsDir,
+    inputs.cacheDir
+  )
+  if (inputs.prMode && isMergeRequest()) {
+    const sha = await getPrSha()
+    if (sha !== '') {
+      args.push('--commit', sha)
+    }
+  }
+  if (isMergeRequest()) {
+    const sourceBranch =
+      process.env.QODANA_BRANCH ||
+      process.env.CI_MERGE_REQUEST_SOURCE_BRANCH_NAME
+    if (sourceBranch) {
+      process.env.QODANA_BRANCH = sourceBranch
+    }
+  }
+  return qodanaExec(args)
+}
+
+async function getPrSha(): Promise<string> {
+  try {
+    if (process.env.QODANA_PR_SHA) {
+      return process.env.QODANA_PR_SHA
+    }
+    if (isMergeRequest()) {
+      const sourceBranch = process.env.CI_MERGE_REQUEST_SOURCE_BRANCH_NAME
+      const targetBranch = process.env.CI_MERGE_REQUEST_TARGET_BRANCH_NAME
+      if (!sourceBranch || !targetBranch) {
+        console.warn(
+          `Source or target branch is not defined, falling back to regular scan`
+        )
+        return ''
+      }
+      await git(['fetch', 'origin'])
+      const output = await gitOutput([
+        'merge-base',
+        'origin/' + targetBranch,
+        'origin/' + sourceBranch
+      ])
+      return output.stdout.trim()
+    }
+    return ''
+  } catch (e) {
+    console.warn(
+      `Failed to determine merge base for PR mode, falling back to regular scan: ${(e as Error).message}`
+    )
+    return ''
+  }
+}
+
+function getInitialCacheLocation(): string {
+  return getQodanaStringArg(
+    'CACHE_DIR',
+    `${process.env['CI_PROJECT_DIR']}/.qodana/cache`
+  )
+}
+
+// at this moment any changes inside .qodana dir may affect analysis results
+export function prepareCaches(cacheDir: string): void {
+  const initialCacheLocation = getInitialCacheLocation()
+  debug(`Initial cache location: ${initialCacheLocation}`)
+  if (path.resolve(initialCacheLocation) == path.resolve(cacheDir)) {
+    debug(
+      `Initial cache location matches cacheDir (${cacheDir}); skipping copy`
+    )
+    return
+  }
+  if (fs.existsSync(initialCacheLocation)) {
+    debug(`Copying cache from ${initialCacheLocation} to ${cacheDir}`)
+    fs.cpSync(initialCacheLocation, cacheDir, {recursive: true})
+  } else {
+    debug(`No cache at location: ${initialCacheLocation}`)
+  }
+}
+
+export function uploadCache(cacheDir: string, execute: boolean): void {
+  if (!execute) {
+    return
+  }
+  try {
+    const initialCacheLocation = getInitialCacheLocation()
+    if (path.resolve(initialCacheLocation) == path.resolve(cacheDir)) {
+      debug(
+        `Initial cache location matches cacheDir (${cacheDir}); skipping upload`
+      )
+      return
+    }
+    debug(
+      `Deleting initial cache at ${initialCacheLocation} and saving cache from ${cacheDir}`
+    )
+    fs.cpSync(cacheDir, initialCacheLocation, {recursive: true, force: true})
+  } catch (e) {
+    console.error(`Failed to upload cache: ${(e as Error).message}`)
+  }
+}
+
+export function uploadArtifacts(resultsDir: string): void {
+  try {
+    const resultDir = getQodanaStringArg('RESULTS_DIR', '.qodana/results')
+    const ciProjectDir = process.env['CI_PROJECT_DIR']
+    if (!ciProjectDir) {
+      console.warn('CI_PROJECT_DIR is not defined, skipping artifacts upload')
+      return
+    }
+    const resultsArtifactPath = path.join(ciProjectDir, resultDir)
+    debug(`Copying artifacts from ${resultsDir} to ${resultsArtifactPath}`)
+    fs.cpSync(resultsDir, resultsArtifactPath, {recursive: true})
+  } catch (e) {
+    console.error(`Failed to upload artifacts: ${(e as Error).message}`)
+  }
+}
+
+export function getWorkflowRunUrl(): string {
+  const projectUrl = process.env['CI_PROJECT_URL']
+  const pipelineId = process.env['CI_PIPELINE_ID']
+  if (!projectUrl || !pipelineId) {
+    console.warn(
+      'CI_PROJECT_URL or CI_PIPELINE_ID is not defined, the pipeline url will be invalid'
+    )
+  }
+  return `${projectUrl}/pipelines/${pipelineId}`
+}
+
+export async function postResultsToPRComments(
+  toolName: string,
+  sourceDir: string,
+  content: string,
+  hasIssues: boolean,
+  postComment: boolean
+): Promise<void> {
+  if (!postComment) {
+    return
+  }
+  try {
+    const comment_tag_pattern = getCommentTag(toolName, sourceDir)
+    const body = `${content}\n${comment_tag_pattern}`
+
+    const result = await findCommentByTag(comment_tag_pattern)
+    let discussionId = result.discussionId
+    const noteId = result.noteId
+
+    const api = getGitlabApi()
+    const mergeRequestId = getEnvVariable('CI_MERGE_REQUEST_IID')
+    const projectId = getEnvVariable('CI_PROJECT_ID')
+    if (discussionId === undefined || noteId === undefined) {
+      discussionId = (
+        await api.MergeRequestDiscussions.create(
+          projectId,
+          mergeRequestId,
+          body
+        )
+      ).id
+    } else {
+      await api.MergeRequestDiscussions.editNote(
+        projectId,
+        mergeRequestId,
+        discussionId,
+        noteId,
+        {
+          body: body
+        }
+      )
+    }
+    await api.MergeRequestDiscussions.resolve(
+      projectId,
+      mergeRequestId,
+      discussionId,
+      !hasIssues
+    )
+  } catch (e) {
+    console.warn(`Was not able to post comment to PR: ${(e as Error).message}`)
+  }
+}
+
+export async function findCommentByTag(tag: string): Promise<{
+  discussionId: string | undefined
+  noteId: number | undefined
+}> {
+  try {
+    const api = getGitlabApi()
+    const mergeRequestId = getEnvVariable('CI_MERGE_REQUEST_IID')
+    const projectId = getEnvVariable('CI_PROJECT_ID')
+    const discussions = (await api.MergeRequestDiscussions.all(
+      projectId,
+      mergeRequestId
+    )) as DiscussionSchema[]
+
+    for (const discussion of discussions) {
+      if (discussion.notes === undefined) continue
+      const note = discussion.notes.find(note => note.body.includes(tag))
+      if (note)
+        return {
+          discussionId: discussion.id,
+          noteId: note.id
+        }
+    }
+    return {
+      discussionId: undefined,
+      noteId: undefined
+    }
+  } catch (e) {
+    console.error('Error occurred while finding comment produced by Qodana')
+    throw e
+  }
+}
+
+export function getEnvVariable(name: string): string {
+  const result = process.env[name]
+  if (!result) {
+    throw new Error(`Variable ${name} is not set`)
+  }
+  return result
+}
+
+export async function pushQuickFixes(
+  mode: PushFixesType,
+  commitMessage: string
+): Promise<void> {
+  if (mode === NONE) {
+    return
+  }
+  try {
+    let currentBranch
+    if (isMergeRequest()) {
+      currentBranch = getEnvVariable('CI_MERGE_REQUEST_SOURCE_BRANCH_NAME')
+    } else {
+      currentBranch = getEnvVariable('CI_COMMIT_BRANCH')
+    }
+    currentBranch = validateBranchName(currentBranch)
+    const currentCommit = (await gitOutput(['rev-parse', 'HEAD'])).stdout.trim()
+    await git(['config', 'user.name', COMMIT_USER])
+    await git(['config', 'user.email', COMMIT_EMAIL])
+    await git(['add', '.'])
+    commitMessage = commitMessage + '\n\n[skip-ci]'
+    const output = await gitOutput(['commit', '-m', commitMessage], true)
+    if (output.returnCode !== 0) {
+      return
+    }
+    // Check for any files that may interfere with pull --rebase
+    const statusOutput = await gitOutput(['status', '--porcelain'], true)
+    if (statusOutput.stdout.trim() !== '') {
+      console.warn(`Git status before pull --rebase:\n${statusOutput.stdout}`)
+    }
+    const pullReturnCode = await git([
+      'pull',
+      '--rebase',
+      'origin',
+      currentBranch
+    ])
+    if (pullReturnCode !== 0) {
+      return
+    }
+    if (mode === BRANCH) {
+      const commitToCherryPick = (
+        await gitOutput(['rev-parse', 'HEAD'])
+      ).stdout.trim()
+      await git(['checkout', currentBranch])
+      await git(['cherry-pick', commitToCherryPick])
+      await git(['fetch', 'origin', currentBranch])
+      await gitPush(currentBranch, false)
+      console.log(`Pushed quick-fixes to branch ${currentBranch}`)
+    } else if (mode === PULL_REQUEST) {
+      const newBranch = `qodana/quick-fixes-${currentCommit.slice(0, 7)}`
+      await git(['checkout', '-b', newBranch])
+      await gitPush(newBranch, true)
+      await createPr(commitMessage, newBranch, currentBranch)
+      console.log(
+        `Pushed quick-fixes to branch ${newBranch} and created pull request`
+      )
+    }
+  } catch (e) {
+    console.warn(`Failed to push quick fixes – ${(e as Error).message}`)
+  }
+}
+
+async function gitPush(branch: string, force: boolean): Promise<void> {
+  const serverUrl = process.env.CI_SERVER_URL
+  const projectPath = process.env.CI_PROJECT_PATH
+
+  if (!serverUrl || !projectPath) {
+    throw new Error(
+      'Missing GitLab CI predefined variables: CI_SERVER_URL and CI_PROJECT_PATH'
+    )
+  }
+
+  const token = process.env.QODANA_GITLAB_TOKEN || ''
+
+  const url = new URL(`${serverUrl}/${projectPath}.git`)
+
+  url.username = COMMIT_USER
+  url.password = token
+
+  const pushUrl = url.toString()
+
+  const pushArgs = ['push']
+  if (force) {
+    pushArgs.push('--force')
+  }
+  pushArgs.push('-o', 'ci.skip', pushUrl, branch)
+
+  await git(pushArgs)
+}
+
+async function createPr(
+  commitMessage: string,
+  sourceBranch: string,
+  targetBranch: string
+): Promise<void> {
+  const api = getGitlabApi()
+  const projectId = getEnvVariable('CI_PROJECT_ID')
+  const description = prFixesBody(getWorkflowRunUrl())
+  try {
+    await api.MergeRequests.create(
+      projectId,
+      sourceBranch,
+      targetBranch,
+      commitMessage,
+      {description: description}
+    )
+  } catch (e) {
+    console.error(`Failed to create PR: ${(e as Error).message}`)
+  }
+}
