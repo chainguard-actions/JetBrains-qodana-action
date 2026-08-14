@@ -1,0 +1,44 @@
+name: Test push-fixes none (default)
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Run Qodana action with push-fixes none
+        id: qodana
+        uses: .
+        with:
+          use-caches: "false"
+          upload-result: "false"
+          use-annotations: "false"
+          post-pr-comment: "false"
+          pr-mode: "false"
+          push-fixes: "none"
+          results-dir: "/tmp/qodana-no-push/results"
+          cache-dir: "/tmp/qodana-no-push/caches"
+        continue-on-error: true
+
+      - name: Assert action ran (not skipped)
+        env:
+          OUTCOME: ${{ steps.qodana.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" = "skipped" ]; then
+            echo "FAIL: action was skipped, expected it to run"
+            exit 1
+          fi
+          echo "PASS: action ran with push-fixes=none (outcome=$OUTCOME)"
+
+      - name: Assert no unexpected git commits were made
+        run: |
+          # With push-fixes=none, no commits should be made by the action
+          COMMIT_MSG=$(git log -1 --pretty=%s 2>/dev/null || echo "")
+          echo "Last commit message: $COMMIT_MSG"
+          if echo "$COMMIT_MSG" | grep -q "Apply quick-fixes by Qodana"; then
+            echo "FAIL: unexpected Qodana quick-fix commit found"
+            exit 1
+          fi
+          echo "PASS: no unexpected Qodana commits"
