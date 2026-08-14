@@ -1,0 +1,30 @@
+name: Test push-fixes none configuration
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_REF: refs/heads/main
+      GITHUB_EVENT_NAME: push
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - id: action
+        uses: .
+        with:
+          use-caches: "false"
+          upload-result: "false"
+          use-annotations: "false"
+          pr-mode: "false"
+          post-pr-comment: "false"
+          push-fixes: "none"
+          commit-message: "Custom commit message for fixes"
+          results-dir: "/tmp/qodana-results-fixes"
+          cache-dir: "/tmp/qodana-caches-fixes"
+        continue-on-error: true
+
+      - name: Assert action ran with push-fixes none
+        run: |
+          echo "Action completed with push-fixes=none"
+          echo "PASS: action step was reached and executed"

@@ -1,0 +1,42 @@
+name: Test with PR mode disabled
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Run Qodana action with pr-mode disabled
+        id: action
+        uses: .
+        with:
+          use-caches: "false"
+          upload-result: "false"
+          use-annotations: "false"
+          pr-mode: "false"
+          post-pr-comment: "false"
+          push-fixes: "none"
+          results-dir: "${{ runner.temp }}/qodana-prmode/results"
+          cache-dir: "${{ runner.temp }}/qodana-prmode/caches"
+        continue-on-error: true
+
+      - name: Assert results directory was created
+        run: |
+          RESULTS_DIR="${RUNNER_TEMP}/qodana-prmode/results"
+          echo "Checking results dir: $RESULTS_DIR"
+          if [ ! -d "$RESULTS_DIR" ]; then
+            echo "FAIL: results directory was not created"
+            exit 1
+          fi
+          echo "PASS: results directory exists"
+
+      - name: Assert Qodana CLI is available
+        run: |
+          echo "Checking if qodana CLI is available on PATH..."
+          if ! command -v qodana >/dev/null 2>&1; then
+            echo "FAIL: qodana CLI not found on PATH"
+            exit 1
+          fi
+          echo "PASS: qodana CLI found at $(command -v qodana)"
+          qodana --version || true

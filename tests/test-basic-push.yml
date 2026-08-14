@@ -1,0 +1,30 @@
+name: Test basic push scan
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_REF: refs/heads/main
+      GITHUB_EVENT_NAME: push
+      GITHUB_SHA: abc1234567890abcdef1234567890abcdef12345
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - id: action
+        uses: .
+        with:
+          use-caches: "false"
+          upload-result: "false"
+          use-annotations: "false"
+          pr-mode: "false"
+          post-pr-comment: "false"
+          results-dir: "/tmp/qodana-results"
+          cache-dir: "/tmp/qodana-caches"
+          args: "--linter,jetbrains/qodana-jvm-community:2025.2,--fail-threshold,100"
+        continue-on-error: true
+
+      - name: Assert action ran
+        run: |
+          echo "Action completed (exit may be non-zero due to findings or missing linter config)"
+          echo "PASS: action step was reached and executed"

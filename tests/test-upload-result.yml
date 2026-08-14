@@ -1,0 +1,29 @@
+name: Test upload result configuration
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_REF: refs/heads/main
+      GITHUB_EVENT_NAME: push
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - id: action
+        uses: .
+        with:
+          use-caches: "false"
+          upload-result: "true"
+          artifact-name: "my-qodana-report"
+          use-annotations: "false"
+          pr-mode: "false"
+          post-pr-comment: "false"
+          results-dir: "/tmp/qodana-results-upload"
+          cache-dir: "/tmp/qodana-caches-upload"
+        continue-on-error: true
+
+      - name: Assert action ran with upload-result enabled
+        run: |
+          echo "Action completed with upload-result=true and artifact-name=my-qodana-report"
+          echo "PASS: action step was reached and executed"

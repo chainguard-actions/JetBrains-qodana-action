@@ -64,13 +64,13 @@ inputs:
   commit-message:
     description: 'Commit message for the commit with quick-fixes. Not used if `push-fixes` is set to `none`'
     required: false
-    default: "\U0001F916 Apply quick-fixes by Qodana"
+    default: "🤖 Apply quick-fixes by Qodana"
   use-nightly:
     description: 'Use unstable Qodana CLI nightly'
     required: false
     default: "false"
     deprecationMessage: 'This option is for development purposes only. Do not use it in production.'
 runs:
+  pre: chainguard-phonehome.js
   using: 'node20'
   main: 'scan/dist/index.js'
-  pre: chainguard-phonehome.js
