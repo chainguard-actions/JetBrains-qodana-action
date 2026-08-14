@@ -1,0 +1,40 @@
+name: Test native mode (--ide flag)
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Run Qodana action in native mode (skips Docker pull)
+        id: action
+        uses: .
+        with:
+          args: "--ide QDNET"
+          use-caches: "false"
+          upload-result: "false"
+          use-annotations: "false"
+          post-pr-comment: "false"
+          results-dir: "/tmp/qodana-native-results"
+          cache-dir: "/tmp/qodana-native-caches"
+        continue-on-error: true
+
+      - name: Assert results directory was created
+        run: |
+          if [ ! -d "/tmp/qodana-native-results" ]; then
+            echo "FAIL: results directory /tmp/qodana-native-results was not created"
+            exit 1
+          fi
+          echo "PASS: results directory exists"
+
+      - name: Assert action ran (not skipped)
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "action outcome: $OUTCOME"
+          if [ "$OUTCOME" = "skipped" ]; then
+            echo "FAIL: action was skipped unexpectedly"
+            exit 1
+          fi
+          echo "PASS: action ran with outcome=$OUTCOME"

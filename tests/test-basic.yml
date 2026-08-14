@@ -1,0 +1,39 @@
+name: Test basic invocation
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Run Qodana action (expected to fail without license)
+        id: action
+        uses: .
+        with:
+          use-caches: "false"
+          upload-result: "false"
+          use-annotations: "false"
+          post-pr-comment: "false"
+          results-dir: "/tmp/qodana-test-results"
+          cache-dir: "/tmp/qodana-test-caches"
+        continue-on-error: true
+
+      - name: Assert results directory was created
+        run: |
+          if [ ! -d "/tmp/qodana-test-results" ]; then
+            echo "FAIL: results directory was not created by the action"
+            exit 1
+          fi
+          echo "PASS: results directory exists at /tmp/qodana-test-results"
+
+      - name: Assert action ran (outcome is either success or failure, not skipped)
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "action outcome: $OUTCOME"
+          if [ "$OUTCOME" = "skipped" ]; then
+            echo "FAIL: action was skipped, expected it to run"
+            exit 1
+          fi
+          echo "PASS: action ran with outcome=$OUTCOME"
