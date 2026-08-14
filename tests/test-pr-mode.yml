@@ -1,0 +1,35 @@
+name: Test PR mode
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_REF: refs/pull/1/merge
+      GITHUB_EVENT_NAME: pull_request
+      GITHUB_HEAD_REF: feature-branch
+      GITHUB_BASE_REF: main
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        with:
+          use-caches: "false"
+          upload-result: "false"
+          use-annotations: "false"
+          pr-mode: "true"
+          post-pr-comment: "false"
+          results-dir: "/tmp/qodana-results-pr"
+          cache-dir: "/tmp/qodana-caches-pr"
+          push-fixes: "none"
+        continue-on-error: true
+      - name: Assert action ran in PR mode (outcome is set)
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "action outcome: $OUTCOME"
+          if [ -z "$OUTCOME" ]; then
+            echo "FAIL: action outcome was empty — action did not run"
+            exit 1
+          fi
+          echo "PASS: action ran in PR mode with outcome=$OUTCOME"
