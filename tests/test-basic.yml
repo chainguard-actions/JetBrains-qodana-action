@@ -1,0 +1,46 @@
+name: Test basic invocation
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Run Qodana action (expect failure without license)
+        id: action
+        uses: .
+        with:
+          use-caches: "false"
+          upload-result: "false"
+          use-annotations: "false"
+          post-pr-comment: "false"
+          pr-mode: "false"
+          results-dir: "/tmp/qodana-test/results"
+          cache-dir: "/tmp/qodana-test/caches"
+        continue-on-error: true
+
+      - name: Assert results directory was created
+        run: |
+          if [ ! -d "/tmp/qodana-test/results" ]; then
+            echo "FAIL: results directory was not created"
+            exit 1
+          fi
+          echo "PASS: results directory exists"
+
+      - name: Assert cache directory was created
+        run: |
+          if [ ! -d "/tmp/qodana-test/caches" ]; then
+            echo "FAIL: cache directory was not created"
+            exit 1
+          fi
+          echo "PASS: cache directory exists"
+
+      - name: Assert Qodana CLI was downloaded and is on PATH
+        run: |
+          if ! command -v qodana >/dev/null 2>&1; then
+            echo "FAIL: qodana CLI not found on PATH"
+            exit 1
+          fi
+          echo "PASS: qodana CLI is available"
+          qodana --version || true

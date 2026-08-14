@@ -1,0 +1,39 @@
+name: Test custom results directory
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Run Qodana action with custom results dir
+        id: action
+        uses: .
+        with:
+          use-caches: "false"
+          upload-result: "false"
+          use-annotations: "false"
+          post-pr-comment: "false"
+          pr-mode: "false"
+          results-dir: "/tmp/qodana-custom-results"
+          cache-dir: "/tmp/qodana-custom-caches"
+        continue-on-error: true
+
+      - name: Assert custom results directory was created
+        run: |
+          echo "Checking custom results directory..."
+          if [ ! -d "/tmp/qodana-custom-results" ]; then
+            echo "FAIL: custom results directory /tmp/qodana-custom-results was not created"
+            exit 1
+          fi
+          echo "PASS: custom results directory exists at /tmp/qodana-custom-results"
+
+      - name: Assert custom cache directory was created
+        run: |
+          echo "Checking custom cache directory..."
+          if [ ! -d "/tmp/qodana-custom-caches" ]; then
+            echo "FAIL: custom cache directory /tmp/qodana-custom-caches was not created"
+            exit 1
+          fi
+          echo "PASS: custom cache directory exists at /tmp/qodana-custom-caches"

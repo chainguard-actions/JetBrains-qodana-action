@@ -1,0 +1,41 @@
+name: Test Qodana CLI download and version
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Run Qodana action to trigger CLI download
+        id: action
+        uses: .
+        with:
+          use-caches: "false"
+          upload-result: "false"
+          use-annotations: "false"
+          post-pr-comment: "false"
+          pr-mode: "false"
+          results-dir: "/tmp/qodana-cli-test/results"
+          cache-dir: "/tmp/qodana-cli-test/caches"
+        continue-on-error: true
+
+      - name: Assert Qodana CLI binary is available
+        run: |
+          echo "Checking qodana CLI availability..."
+          if ! command -v qodana >/dev/null 2>&1; then
+            echo "FAIL: qodana binary not found on PATH after action ran"
+            exit 1
+          fi
+          echo "PASS: qodana binary is on PATH"
+
+      - name: Assert Qodana CLI version matches expected
+        run: |
+          QODANA_VERSION=$(qodana --version 2>&1 || true)
+          echo "Qodana version output: $QODANA_VERSION"
+          if echo "$QODANA_VERSION" | grep -q "2025.3.1"; then
+            echo "PASS: Qodana CLI version 2025.3.1 confirmed"
+          else
+            echo "FAIL: Expected version 2025.3.1 but got: $QODANA_VERSION"
+            exit 1
+          fi
