@@ -1,0 +1,20 @@
+name: Sync branches main with latest
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  sync-branch:
+    name: Update latest branch
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@61b9e3751b92087fd0b06925ba6dd6314e06f089 # master
+      - uses: connor-baer/action-sync-branch@c17906380f69bd4cd04e89ee61626f40d5c3b8a2 # main
+        with:
+          branch: latest
+          token: ${{ secrets.GITHUB_TOKEN }}
+          force: false

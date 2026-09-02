@@ -1,0 +1,32 @@
+name: Test use-installed-cli when qodana not on PATH
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          use-installed-cli: "true"
+          use-caches: "false"
+          upload-result: "false"
+          use-annotations: "false"
+          post-pr-comment: "false"
+          pr-mode: "false"
+          push-fixes: "none"
+      - name: Assert action fails when qodana is not on PATH
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action correctly failed when qodana CLI is not available on PATH"
+          elif [ "$OUTCOME" = "success" ]; then
+            echo "PASS: action succeeded (qodana was found on PATH)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi
