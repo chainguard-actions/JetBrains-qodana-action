@@ -1,0 +1,22 @@
+{
+  "name": "@qodana/scan-task",
+  "version": "1.0.0",
+  "description": "Defines packages that can't be bundled to index.js, but needed for this Azure Pipelines task.",
+  "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JetBrains/qodana-action.git"
+  },
+  "keywords": [
+    "actions",
+    "code-quality",
+    "static-analysis",
+    "qodana"
+  ],
+  "author": "JetBrains",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "azure-pipelines-task-lib": "^4.13.0",
+    "shelljs": "^0.8.5"
+  }
+}

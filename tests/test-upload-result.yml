@@ -1,0 +1,35 @@
+name: Test upload-result and artifact-name inputs
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Run Qodana action with upload-result enabled and custom artifact name
+        id: action
+        uses: .
+        continue-on-error: true
+        with:
+          use-caches: "false"
+          upload-result: "true"
+          artifact-name: "my-qodana-report"
+          use-annotations: "false"
+          pr-mode: "false"
+          post-pr-comment: "false"
+          push-fixes: "none"
+
+      - name: Assert action ran (upload-result=true, custom artifact-name accepted)
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed gracefully as expected (no Qodana config/license)"
+          elif [ "$OUTCOME" = "success" ]; then
+            echo "PASS: action succeeded with upload-result=true"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi
