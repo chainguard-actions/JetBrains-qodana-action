@@ -19,6 +19,7 @@ Hardened by [Chainguard](https://www.chainguard.dev) from the upstream action at
 | v2026.2 | [`v2026.2`](https://github.com/chainguard-actions/JetBrains-qodana-action/tree/v2026.2) | [`10be116`](https://github.com/JetBrains/qodana-action/commit/10be11607eb323a180e2b76b26c9c5cdceac3e77) |
 | v2026.2.0 | [`v2026.2.0`](https://github.com/chainguard-actions/JetBrains-qodana-action/tree/v2026.2.0) | [`b588768`](https://github.com/JetBrains/qodana-action/commit/b588768b6e7e6da579e518bc584f79de0d243692) |
 | v2026.2.1 | [`v2026.2.1`](https://github.com/chainguard-actions/JetBrains-qodana-action/tree/v2026.2.1) | [`10be116`](https://github.com/JetBrains/qodana-action/commit/10be11607eb323a180e2b76b26c9c5cdceac3e77) |
+| v2026.2.2 | [`v2026.2.2`](https://github.com/chainguard-actions/JetBrains-qodana-action/tree/v2026.2.2) | [`3e8d76f`](https://github.com/JetBrains/qodana-action/commit/3e8d76ff0e0241618abd808682f426afe84bab3f) |
 
 ## Privacy
 
