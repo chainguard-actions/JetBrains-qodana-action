@@ -6,20 +6,20 @@ Hardened by [Chainguard](https://www.chainguard.dev) from the upstream action at
 
 ## Versions
 
-| Version | Tag | Upstream commit |
-|---------|-----|-----------------|
-| v2025.2 | [`v2025.2`](https://github.com/chainguard-actions/JetBrains-qodana-action/tree/v2025.2) | [`8d427a3`](https://github.com/JetBrains/qodana-action/commit/8d427a3995aede61f5d65005f6ab24cab989d81e) |
-| v2025.2.3 | [`v2025.2.3`](https://github.com/chainguard-actions/JetBrains-qodana-action/tree/v2025.2.3) | [`8d427a3`](https://github.com/JetBrains/qodana-action/commit/8d427a3995aede61f5d65005f6ab24cab989d81e) |
-| v2025.3 | [`v2025.3`](https://github.com/chainguard-actions/JetBrains-qodana-action/tree/v2025.3) | [`42dad39`](https://github.com/JetBrains/qodana-action/commit/42dad391966aca8ca344ca2340a7f43a5507e9b2) |
-| v2025.3.1 | [`v2025.3.1`](https://github.com/chainguard-actions/JetBrains-qodana-action/tree/v2025.3.1) | [`42dad39`](https://github.com/JetBrains/qodana-action/commit/42dad391966aca8ca344ca2340a7f43a5507e9b2) |
-| v2025.3.2 | [`v2025.3.2`](https://github.com/chainguard-actions/JetBrains-qodana-action/tree/v2025.3.2) | [`89eb435`](https://github.com/JetBrains/qodana-action/commit/89eb4357efd2b52e639f3216e63edaf33b82622b) |
-| v2026.1 | [`v2026.1`](https://github.com/chainguard-actions/JetBrains-qodana-action/tree/v2026.1) | [`d7b5ec2`](https://github.com/JetBrains/qodana-action/commit/d7b5ec2fbec32197ef447c450e00589ed5f34fd5) |
-| v2026.1.0 | [`v2026.1.0`](https://github.com/chainguard-actions/JetBrains-qodana-action/tree/v2026.1.0) | [`d7b5ec2`](https://github.com/JetBrains/qodana-action/commit/d7b5ec2fbec32197ef447c450e00589ed5f34fd5) |
-| v2026.1.3 | [`v2026.1.3`](https://github.com/chainguard-actions/JetBrains-qodana-action/tree/v2026.1.3) | [`4861e01`](https://github.com/JetBrains/qodana-action/commit/4861e015da555e86a72b862892aba6c2b93e6891) |
-| v2026.2 | [`v2026.2`](https://github.com/chainguard-actions/JetBrains-qodana-action/tree/v2026.2) | [`10be116`](https://github.com/JetBrains/qodana-action/commit/10be11607eb323a180e2b76b26c9c5cdceac3e77) |
-| v2026.2.0 | [`v2026.2.0`](https://github.com/chainguard-actions/JetBrains-qodana-action/tree/v2026.2.0) | [`b588768`](https://github.com/JetBrains/qodana-action/commit/b588768b6e7e6da579e518bc584f79de0d243692) |
-| v2026.2.1 | [`v2026.2.1`](https://github.com/chainguard-actions/JetBrains-qodana-action/tree/v2026.2.1) | [`10be116`](https://github.com/JetBrains/qodana-action/commit/10be11607eb323a180e2b76b26c9c5cdceac3e77) |
-| v2026.2.2 | [`v2026.2.2`](https://github.com/chainguard-actions/JetBrains-qodana-action/tree/v2026.2.2) | [`3e8d76f`](https://github.com/JetBrains/qodana-action/commit/3e8d76ff0e0241618abd808682f426afe84bab3f) |
+| Version | Tag | Upstream commit | Hardening report |
+|---------|-----|-----------------|------------------|
+| v2025.2 | [`v2025.2`](https://github.com/chainguard-actions/JetBrains-qodana-action/tree/v2025.2) | [`8d427a3`](https://github.com/JetBrains/qodana-action/commit/8d427a3995aede61f5d65005f6ab24cab989d81e) | — |
+| v2025.2.3 | [`v2025.2.3`](https://github.com/chainguard-actions/JetBrains-qodana-action/tree/v2025.2.3) | [`8d427a3`](https://github.com/JetBrains/qodana-action/commit/8d427a3995aede61f5d65005f6ab24cab989d81e) | [`HARDENING.md`](https://github.com/chainguard-actions/JetBrains-qodana-action/blob/v2025.2.3/HARDENING.md) |
+| v2025.3 | [`v2025.3`](https://github.com/chainguard-actions/JetBrains-qodana-action/tree/v2025.3) | [`42dad39`](https://github.com/JetBrains/qodana-action/commit/42dad391966aca8ca344ca2340a7f43a5507e9b2) | — |
+| v2025.3.1 | [`v2025.3.1`](https://github.com/chainguard-actions/JetBrains-qodana-action/tree/v2025.3.1) | [`42dad39`](https://github.com/JetBrains/qodana-action/commit/42dad391966aca8ca344ca2340a7f43a5507e9b2) | [`HARDENING.md`](https://github.com/chainguard-actions/JetBrains-qodana-action/blob/v2025.3.1/HARDENING.md) |
+| v2025.3.2 | [`v2025.3.2`](https://github.com/chainguard-actions/JetBrains-qodana-action/tree/v2025.3.2) | [`89eb435`](https://github.com/JetBrains/qodana-action/commit/89eb4357efd2b52e639f3216e63edaf33b82622b) | [`HARDENING.md`](https://github.com/chainguard-actions/JetBrains-qodana-action/blob/v2025.3.2/HARDENING.md) |
+| v2026.1 | [`v2026.1`](https://github.com/chainguard-actions/JetBrains-qodana-action/tree/v2026.1) | [`d7b5ec2`](https://github.com/JetBrains/qodana-action/commit/d7b5ec2fbec32197ef447c450e00589ed5f34fd5) | — |
+| v2026.1.0 | [`v2026.1.0`](https://github.com/chainguard-actions/JetBrains-qodana-action/tree/v2026.1.0) | [`d7b5ec2`](https://github.com/JetBrains/qodana-action/commit/d7b5ec2fbec32197ef447c450e00589ed5f34fd5) | [`HARDENING.md`](https://github.com/chainguard-actions/JetBrains-qodana-action/blob/v2026.1.0/HARDENING.md) |
+| v2026.1.3 | [`v2026.1.3`](https://github.com/chainguard-actions/JetBrains-qodana-action/tree/v2026.1.3) | [`4861e01`](https://github.com/JetBrains/qodana-action/commit/4861e015da555e86a72b862892aba6c2b93e6891) | [`HARDENING.md`](https://github.com/chainguard-actions/JetBrains-qodana-action/blob/v2026.1.3/HARDENING.md) |
+| v2026.2 | [`v2026.2`](https://github.com/chainguard-actions/JetBrains-qodana-action/tree/v2026.2) | [`10be116`](https://github.com/JetBrains/qodana-action/commit/10be11607eb323a180e2b76b26c9c5cdceac3e77) | — |
+| v2026.2.0 | [`v2026.2.0`](https://github.com/chainguard-actions/JetBrains-qodana-action/tree/v2026.2.0) | [`b588768`](https://github.com/JetBrains/qodana-action/commit/b588768b6e7e6da579e518bc584f79de0d243692) | [`HARDENING.md`](https://github.com/chainguard-actions/JetBrains-qodana-action/blob/v2026.2.0/HARDENING.md) |
+| v2026.2.1 | [`v2026.2.1`](https://github.com/chainguard-actions/JetBrains-qodana-action/tree/v2026.2.1) | [`10be116`](https://github.com/JetBrains/qodana-action/commit/10be11607eb323a180e2b76b26c9c5cdceac3e77) | [`HARDENING.md`](https://github.com/chainguard-actions/JetBrains-qodana-action/blob/v2026.2.1/HARDENING.md) |
+| v2026.2.2 | [`v2026.2.2`](https://github.com/chainguard-actions/JetBrains-qodana-action/tree/v2026.2.2) | [`3e8d76f`](https://github.com/JetBrains/qodana-action/commit/3e8d76ff0e0241618abd808682f426afe84bab3f) | [`HARDENING.md`](https://github.com/chainguard-actions/JetBrains-qodana-action/blob/v2026.2.2/HARDENING.md) |
 
 ## Privacy
 
