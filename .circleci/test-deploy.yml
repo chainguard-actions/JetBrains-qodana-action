@@ -1,0 +1,39 @@
+version: 2.1
+orbs:
+  qodana: jetbrains/qodana@dev:<<pipeline.git.revision>>
+  orb-tools: circleci/orb-tools@12.0
+
+filters: &filters
+  tags:
+    only: /.*/
+
+jobs:
+  code-quality:
+    machine:
+      image: ubuntu-2004:current
+    steps:
+      - checkout
+      - qodana/scan:
+          args: "--config .github/qodana.yaml --print-problems --log-level debug --linter jetbrains/qodana-jvm-community:latest --property idea.headless.enable.statistics=false"
+
+workflows:
+  test-deploy:
+    jobs:
+      # Make sure to include "filters: *filters" in every test job you want to run as part of your deployment.
+      - orb-tools/pack:
+          filters: *filters
+          source_dir: orb
+      - code-quality
+      - orb-tools/publish:
+          orb_name: jetbrains/qodana
+          vcs_type: << pipeline.project.type >>
+          pub_type: production
+          requires:
+            - orb-tools/pack
+            - code-quality
+          context: orb-publishing
+          filters:
+            branches:
+              ignore: /.*/
+            tags:
+              only: /^v[0-9]+\.[0-9]+\.[0-9]+$/

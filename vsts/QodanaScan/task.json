@@ -1,0 +1,134 @@
+{
+  "$schema": "https://raw.githubusercontent.com/Microsoft/azure-pipelines-task-lib/master/tasks.schema.json",
+  "id": "822d6cb9-d4d1-431b-9513-e7db7d718a49",
+  "name": "QodanaScan",
+  "friendlyName": "Qodana Scan",
+  "description": "Scan your project with Qodana (https://jetbrains.com/qodana)",
+  "helpMarkDown": "Qodana documentation is available at https://jetbrains.com/help/qodana/. This task will scan your project.",
+  "category": "Utility",
+  "author": "JetBrains",
+  "version": {
+    "Major": 2026,
+    "Minor": 1,
+    "Patch": 3
+  },
+  "instanceNameFormat": "Qodana Scan",
+  "inputs": [
+    {
+      "name": "args",
+      "type": "string",
+      "label": "Qodana CLI arguments",
+      "defaultValue": "",
+      "required": false,
+      "helpMarkDown": "[Qodana CLI `scan` arguments](https://github.com/jetbrains/qodana-cli#scan), e.g. `--log-level debug --property key=value`. Quote arguments containing spaces. Comma-separated format is deprecated."
+    },
+    {
+      "name": "resultsDir",
+      "type": "string",
+      "label": "Results Directory",
+      "defaultValue": "$(Agent.TempDirectory)/qodana/results",
+      "required": false,
+      "helpMarkDown": "Directory to store the analysis results"
+    },
+    {
+      "name": "uploadResult",
+      "type": "boolean",
+      "label": "Upload Result",
+      "defaultValue": false,
+      "required": false,
+      "helpMarkDown": "Upload Qodana results as an artifact to the job"
+    },
+    {
+      "name": "uploadSarif",
+      "type": "boolean",
+      "label": "Upload SARIF",
+      "defaultValue": true,
+      "required": false,
+      "helpMarkDown": "For SARIF SAST Scans Tab extension. Upload qodana.sarif.json as an qodana.sarif artifact to the job"
+    },
+    {
+      "name": "artifactName",
+      "type": "string",
+      "label": "Artifact Name",
+      "defaultValue": "qodana-report",
+      "required": false,
+      "helpMarkDown": "Specify Qodana results artifact name, used for results uploading"
+    },
+    {
+      "name": "cacheDir",
+      "type": "string",
+      "label": "Cache Directory",
+      "defaultValue": "$(Agent.TempDirectory)/qodana/cache",
+      "required": false,
+      "helpMarkDown": "Directory to store Qodana caches"
+    },
+    {
+      "name": "nightlyVersion",
+      "type": "string",
+      "label": "Qodana CLI nightly version (e.g. 2026.2 or latest)",
+      "defaultValue": "",
+      "required": false,
+      "helpMarkDown": "This option is for development purposes only. Do not use it in production."
+    },
+    {
+      "name": "prMode",
+      "type": "boolean",
+      "label": "PR Mode",
+      "defaultValue": true,
+      "required": false,
+      "helpMarkDown": "Whether the PR analysis gets executed in the pull request mode."
+    },
+    {
+      "name": "postPrComment",
+      "type": "boolean",
+      "label": "Post PR comment",
+      "defaultValue": true,
+      "required": false,
+      "helpMarkDown": "Post a comment with the Qodana results summary to the pull request."
+    },
+    {
+      "name": "pushFixes",
+      "type": "pickList",
+      "label": "Push quick-fixes",
+      "defaultValue": "none",
+      "options": {
+        "none": "none",
+        "branch": "branch",
+        "pull-request": "pull-request"
+      },
+      "required": false,
+      "helpMarkDown": "Push Qodana fixes to the repository, can be `none`, `branch` to the current branch, or `pull-request`."
+    },
+    {
+      "name": "commitMessage",
+      "type": "string",
+      "label": "Commit Message",
+      "defaultValue": "🤖 Apply quick-fixes by Qodana\n\n[skip ci]",
+      "required": false,
+      "helpMarkDown": "Message used when quick-fixes are pushed"
+    },
+    {
+      "name": "workingDirectory",
+      "type": "string",
+      "label": "Working Directory",
+      "defaultValue": "",
+      "required": false,
+      "helpMarkDown": "Working directory for the Qodana Task"
+    }
+  ],
+  "execution": {
+    "Node10": {
+      "target": "index.js"
+    },
+    "Node16": {
+      "target": "index.js"
+    },
+    "Node20_1": {
+      "target": "index.js"
+    },
+    "Node24": {
+      "target": "index.js"
+    }
+  },
+  "minimumAgentVersion": "2.144.0"
+}

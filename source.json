@@ -1,6 +1,11 @@
 {
   "owner": "JetBrains",
   "repo": "qodana-action",
-  "version": "",
-  "url": "https://github.com/JetBrains/qodana-action"
+  "version": "v2026.1.4",
+  "commit_sha": "c9c173a6953ca827bd12e51e18fdd54c515d3c53",
+  "url": "https://github.com/JetBrains/qodana-action",
+  "policy_sha": "374911c4be584df24e6da57af2d990570ef0f859",
+  "test_policy_sha": "843adf9e4b8f85d0c08b27b9d0b09dd094b54702",
+  "test_agent_version": "2",
+  "harden_agent_version": "2"
 }
